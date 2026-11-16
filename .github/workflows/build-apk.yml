@@ -1,4 +1,4 @@
-name: Build Rokid APK
+name: Build Rokid APKs
 
 on:
   workflow_dispatch:
@@ -17,9 +17,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Build Rokid debug APK
-        run: gradle :glassesapp:assembleDebug
+      - name: Build APKs
+        run: gradle :glassesapp:assembleDebug :phoneapp:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: RokidCameraLink-Glasses-APK
           path: glassesapp/build/outputs/apk/debug/glassesapp-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RokidCameraLink-Phone-APK
+          path: phoneapp/build/outputs/apk/debug/phoneapp-debug.apk
