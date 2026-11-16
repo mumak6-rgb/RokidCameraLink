@@ -21,6 +21,7 @@ public class MainActivity extends Activity {
     private volatile byte[] latestFrame;
     private volatile boolean running = true;
     private ServerSocket serverSocket;
+    private volatile boolean beaconRunning = true;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -36,12 +37,15 @@ public class MainActivity extends Activity {
 
         saveButton.setOnClickListener(v -> saveCurrentFrame());
         startServer();
+        startBeacon();
     }
 
     private void startServer() {
         new Thread(() -> {
             try {
-                serverSocket = new ServerSocket(9090);
+                serverSocket = new ServerSocket();
+                serverSocket.setReuseAddress(true);
+                serverSocket.bind(new InetSocketAddress("0.0.0.0", 9090));
                 while (running) {
                     runOnUiThread(() -> status.setText("Čakám na Rokid okuliare…"));
                     Socket socket = serverSocket.accept();
@@ -72,6 +76,27 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> status.setText("Server zlyhal: " + e.getMessage()));
             }
         }, "PhoneServer").start();
+    }
+
+    private void startBeacon() {
+        new Thread(() -> {
+            DatagramSocket ds = null;
+            try {
+                ds = new DatagramSocket();
+                ds.setBroadcast(true);
+                byte[] data = "ROKID_PHONE:9090".getBytes("UTF-8");
+                while (beaconRunning) {
+                    DatagramPacket p = new DatagramPacket(
+                            data, data.length,
+                            InetAddress.getByName("255.255.255.255"), 9091);
+                    ds.send(p);
+                    try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+                }
+            } catch (Exception ignored) {
+            } finally {
+                if (ds != null) ds.close();
+            }
+        }, "PhoneBeacon").start();
     }
 
     private void saveCurrentFrame() {
@@ -124,6 +149,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onDestroy() {
         running = false;
+        beaconRunning = false;
         try { if (serverSocket != null) serverSocket.close(); } catch (Exception ignored) {}
         super.onDestroy();
     }
