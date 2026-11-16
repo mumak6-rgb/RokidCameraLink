@@ -114,19 +114,6 @@ public class MainActivity extends Activity {
         }, "SelfTest").start();
     }
 
-    private void selfTest() {
-        new Thread(() -> {
-            try {
-                Socket s = new Socket();
-                s.connect(new InetSocketAddress("127.0.0.1", 8080), 2000);
-                s.close();
-                runOnUiThread(() -> status.setText("SERVER BEŽÍ • SELF-TEST OK • port 8080"));
-            } catch (Exception e) {
-                String m = e.getClass().getSimpleName() + (e.getMessage() == null ? "" : ": " + e.getMessage());
-                runOnUiThread(() -> status.setText("SERVER CHYBA • SELF-TEST\n" + m));
-            }
-        }, "PhoneSelfTest").start();
-    }
 
     private void startBeacon() {
         new Thread(() -> {
