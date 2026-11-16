@@ -14,7 +14,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import java.io.*;
-import java.net.Socket;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 
@@ -22,7 +22,7 @@ public class MainActivity extends Activity {
     private static final int REQ_CAMERA = 10;
     private TextView status;
     private EditText phoneIp;
-    private Button connectButton;
+    private Button connectButton, autoButton;
 
     private HandlerThread cameraThread;
     private Handler cameraHandler;
@@ -40,12 +40,14 @@ public class MainActivity extends Activity {
         status = findViewById(R.id.status);
         phoneIp = findViewById(R.id.phoneIp);
         connectButton = findViewById(R.id.connectButton);
+        autoButton = findViewById(R.id.autoButton);
 
         cameraThread = new HandlerThread("RokidCamera");
         cameraThread.start();
         cameraHandler = new Handler(cameraThread.getLooper());
 
         connectButton.setOnClickListener(v -> startStreaming());
+        autoButton.setOnClickListener(v -> discoverPhone());
 
         if (Build.VERSION.SDK_INT >= 23 &&
                 checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -191,12 +193,42 @@ public class MainActivity extends Activity {
                 }
             } catch (Exception e) {
                 String msg = e.getClass().getSimpleName() + (e.getMessage() == null ? "" : ": " + e.getMessage());
-                runOnUiThread(() -> status.setText("NEPRIPOJENÉ • " + msg));
+                runOnUiThread(() -> status.setText("NEPRIPOJENÉ\n" + msg));
             } finally {
                 streaming = false;
                 try { if (socket != null) socket.close(); } catch (Exception ignored) {}
             }
         }, "RokidStream").start();
+    }
+
+    private void discoverPhone() {
+        status.setText("Hľadám mobil v sieti…");
+        new Thread(() -> {
+            DatagramSocket ds = null;
+            try {
+                ds = new DatagramSocket(9091);
+                ds.setSoTimeout(6000);
+                byte[] buf = new byte[256];
+                DatagramPacket p = new DatagramPacket(buf, buf.length);
+                ds.receive(p);
+                String msg = new String(p.getData(), 0, p.getLength(), "UTF-8");
+                if (msg.startsWith("ROKID_PHONE")) {
+                    String ip = p.getAddress().getHostAddress();
+                    runOnUiThread(() -> {
+                        phoneIp.setText(ip);
+                        status.setText("Mobil nájdený: " + ip + "\nSkúsim pripojenie…");
+                        startStreaming();
+                    });
+                } else {
+                    runOnUiThread(() -> status.setText("Našiel som paket, ale nie mobilnú appku."));
+                }
+            } catch (Exception e) {
+                String m = e.getClass().getSimpleName() + (e.getMessage() == null ? "" : ": " + e.getMessage());
+                runOnUiThread(() -> status.setText("Automatické hľadanie zlyhalo\n" + m));
+            } finally {
+                if (ds != null) ds.close();
+            }
+        }, "RokidDiscover").start();
     }
 
     @Override protected void onDestroy() {
