@@ -17,6 +17,7 @@ import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.Enumeration;
 
 public class MainActivity extends Activity {
     private static final int REQ_CAMERA = 10;
