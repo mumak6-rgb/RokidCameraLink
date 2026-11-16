@@ -5,6 +5,9 @@ import android.content.ContentValues;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.os.Build;
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import android.content.Context;
 import android.provider.MediaStore;
@@ -19,7 +22,7 @@ import java.util.Enumeration;
 public class MainActivity extends Activity {
     private TextView ipView, status;
     private ImageView preview;
-    private Button saveButton;
+    private Button saveButton, testButton;
     private volatile byte[] latestFrame;
     private volatile boolean running = true;
     private ServerSocket serverSocket;
@@ -33,13 +36,30 @@ public class MainActivity extends Activity {
         status = findViewById(R.id.status);
         preview = findViewById(R.id.preview);
         saveButton = findViewById(R.id.saveButton);
+        testButton = findViewById(R.id.testButton);
 
         String ip = findIp();
         ipView.setText(ip == null ? "IP mobilu sa nenašla" : "IP MOBILU: " + ip + "   PORT: 9090");
 
         saveButton.setOnClickListener(v -> saveCurrentFrame());
+        testButton.setOnClickListener(v -> selfTest());
+        requestLanPermissionsIfNeeded();
         startServer();
         startBeacon();
+    }
+
+    private void requestLanPermissionsIfNeeded() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            java.util.ArrayList<String> perms = new java.util.ArrayList<>();
+            if (checkSelfPermission("android.permission.NEARBY_WIFI_DEVICES") != PackageManager.PERMISSION_GRANTED) {
+                perms.add("android.permission.NEARBY_WIFI_DEVICES");
+            }
+            if (Build.VERSION.SDK_INT >= 37 &&
+                checkSelfPermission("android.permission.ACCESS_LOCAL_NETWORK") != PackageManager.PERMISSION_GRANTED) {
+                perms.add("android.permission.ACCESS_LOCAL_NETWORK");
+            }
+            if (!perms.isEmpty()) requestPermissions(perms.toArray(new String[0]), 77);
+        }
     }
 
     private void startServer() {
@@ -48,36 +68,50 @@ public class MainActivity extends Activity {
                 serverSocket = new ServerSocket();
                 serverSocket.setReuseAddress(true);
                 serverSocket.bind(new InetSocketAddress("0.0.0.0", 9090));
+                runOnUiThread(() -> status.setText("SERVER 9090 BEŽÍ • čakám na Rokid okuliare"));
                 while (running) {
-                    runOnUiThread(() -> status.setText("Čakám na Rokid okuliare…"));
                     Socket socket = serverSocket.accept();
-                    runOnUiThread(() -> status.setText("PRIPOJENÉ • prijímam živý obraz"));
-                    DataInputStream in = new DataInputStream(
-                            new BufferedInputStream(socket.getInputStream()));
-
-                    try {
-                        while (running && !socket.isClosed()) {
-                            int len = in.readInt();
-                            if (len <= 0 || len > 5_000_000) throw new IOException("Neplatný rámec");
-                            byte[] frame = new byte[len];
-                            in.readFully(frame);
-                            latestFrame = frame;
-
-                            Bitmap bmp = BitmapFactory.decodeByteArray(frame, 0, frame.length);
-                            if (bmp != null) {
-                                runOnUiThread(() -> preview.setImageBitmap(bmp));
-                            }
-                        }
-                    } catch (Exception ignored) {
-                    } finally {
-                        try { socket.close(); } catch (Exception ignored) {}
-                        runOnUiThread(() -> status.setText("Okuliare odpojené. Čakám…"));
-                    }
+                    new Thread(() -> handleClient(socket), "RokidClient").start();
                 }
             } catch (Exception e) {
                 runOnUiThread(() -> status.setText("Server zlyhal: " + e.getMessage()));
             }
         }, "PhoneServer").start();
+    }
+
+    private void handleClient(Socket socket) {
+        String remote = socket.getInetAddress() == null ? "?" : socket.getInetAddress().getHostAddress();
+        runOnUiThread(() -> status.setText("PRIPOJENÉ: " + remote + " • prijímam obraz"));
+        try {
+            DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
+            while (running && !socket.isClosed()) {
+                int len = in.readInt();
+                if (len <= 0 || len > 5_000_000) throw new IOException("Neplatný rámec");
+                byte[] frame = new byte[len];
+                in.readFully(frame);
+                latestFrame = frame;
+                Bitmap bmp = BitmapFactory.decodeByteArray(frame, 0, frame.length);
+                if (bmp != null) runOnUiThread(() -> preview.setImageBitmap(bmp));
+            }
+        } catch (Exception ignored) {
+        } finally {
+            try { socket.close(); } catch (Exception ignored) {}
+            if (running) runOnUiThread(() -> status.setText("SERVER 9090 BEŽÍ • okuliare odpojené"));
+        }
+    }
+
+    private void selfTest() {
+        new Thread(() -> {
+            try {
+                Socket s = new Socket();
+                s.connect(new InetSocketAddress("127.0.0.1", 9090), 2500);
+                s.close();
+                runOnUiThread(() -> status.setText("SELF-TEST OK • port 9090 je otvorený"));
+            } catch (Exception e) {
+                String m = e.getClass().getSimpleName() + (e.getMessage() == null ? "" : ": " + e.getMessage());
+                runOnUiThread(() -> status.setText("SELF-TEST ZLYHAL • " + m));
+            }
+        }, "SelfTest").start();
     }
 
     private void startBeacon() {
