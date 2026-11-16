@@ -3,7 +3,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:padding="28dp"
+    android:padding="24dp"
     android:background="#000000">
 
     <TextView
@@ -12,34 +12,35 @@
         android:text="ROKID CAMERA LINK"
         android:textColor="#00FF66"
         android:textStyle="bold"
-        android:textSize="26sp"/>
+        android:textSize="24sp"/>
 
     <TextView
         android:id="@+id/status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:paddingTop="20dp"
-        android:text="Spúšťam kameru…"
+        android:paddingTop="14dp"
+        android:text="Kamera sa spúšťa…"
         android:textColor="#FFFFFF"
+        android:textSize="17sp"/>
+
+    <EditText
+        android:id="@+id/phoneIp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:hint="IP mobilu, napr. 192.168.1.50"
+        android:inputType="text"
+        android:singleLine="true"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#777777"
         android:textSize="18sp"/>
 
-    <TextView
-        android:id="@+id/address"
+    <Button
+        android:id="@+id/connectButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:paddingTop="18dp"
-        android:textColor="#00FF66"
-        android:textStyle="bold"
-        android:textSize="24sp"/>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:paddingTop="18dp"
-        android:text="Na S24 Ultra otvor túto adresu v Chrome. Telefón a okuliare musia byť na rovnakej Wi‑Fi."
-        android:textColor="#AAAAAA"
-        android:textSize="15sp"/>
+        android:layout_marginTop="14dp"
+        android:text="PRIPOJIŤ K MOBILU"
+        android:textSize="17sp"/>
 </LinearLayout>
