@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
         testButton = findViewById(R.id.testButton);
 
         String ip = findIp();
-        ipView.setText(ip == null ? "IP mobilu sa nenašla" : "IP MOBILU: " + ip + "   PORT: 9090");
+        ipView.setText(ip == null ? "IP mobilu sa nenašla" : "IP MOBILU: " + ip + "   PORT: 8080");
 
         saveButton.setOnClickListener(v -> saveCurrentFrame());
         testButton.setOnClickListener(v -> selfTest());
@@ -67,8 +67,8 @@ public class MainActivity extends Activity {
             try {
                 serverSocket = new ServerSocket();
                 serverSocket.setReuseAddress(true);
-                serverSocket.bind(new InetSocketAddress("0.0.0.0", 9090));
-                runOnUiThread(() -> status.setText("SERVER 9090 BEŽÍ • čakám na Rokid okuliare"));
+                serverSocket.bind(new InetSocketAddress("0.0.0.0", 8080));
+                runOnUiThread(() -> status.setText("SERVER 8080 BEŽÍ • čakám na Rokid okuliare"));
                 while (running) {
                     Socket socket = serverSocket.accept();
                     new Thread(() -> handleClient(socket), "RokidClient").start();
@@ -96,7 +96,7 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {
         } finally {
             try { socket.close(); } catch (Exception ignored) {}
-            if (running) runOnUiThread(() -> status.setText("SERVER 9090 BEŽÍ • okuliare odpojené"));
+            if (running) runOnUiThread(() -> status.setText("SERVER 8080 BEŽÍ • okuliare odpojené"));
         }
     }
 
@@ -104,14 +104,28 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             try {
                 Socket s = new Socket();
-                s.connect(new InetSocketAddress("127.0.0.1", 9090), 2500);
+                s.connect(new InetSocketAddress("127.0.0.1", 8080), 2500);
                 s.close();
-                runOnUiThread(() -> status.setText("SELF-TEST OK • port 9090 je otvorený"));
+                runOnUiThread(() -> status.setText("SELF-TEST OK • port 8080 je otvorený"));
             } catch (Exception e) {
                 String m = e.getClass().getSimpleName() + (e.getMessage() == null ? "" : ": " + e.getMessage());
                 runOnUiThread(() -> status.setText("SELF-TEST ZLYHAL • " + m));
             }
         }, "SelfTest").start();
+    }
+
+    private void selfTest() {
+        new Thread(() -> {
+            try {
+                Socket s = new Socket();
+                s.connect(new InetSocketAddress("127.0.0.1", 8080), 2000);
+                s.close();
+                runOnUiThread(() -> status.setText("SERVER BEŽÍ • SELF-TEST OK • port 8080"));
+            } catch (Exception e) {
+                String m = e.getClass().getSimpleName() + (e.getMessage() == null ? "" : ": " + e.getMessage());
+                runOnUiThread(() -> status.setText("SERVER CHYBA • SELF-TEST\n" + m));
+            }
+        }, "PhoneSelfTest").start();
     }
 
     private void startBeacon() {
@@ -120,7 +134,7 @@ public class MainActivity extends Activity {
             try {
                 ds = new DatagramSocket();
                 ds.setBroadcast(true);
-                byte[] data = "ROKID_PHONE:9090".getBytes("UTF-8");
+                byte[] data = "ROKID_PHONE:8080".getBytes("UTF-8");
                 while (beaconRunning) {
                     DatagramPacket p = new DatagramPacket(
                             data, data.length,
