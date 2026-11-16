@@ -202,33 +202,64 @@ public class MainActivity extends Activity {
     }
 
     private void discoverPhone() {
-        status.setText("Hľadám mobil v sieti…");
+        status.setText("Hľadám S24 Ultra v lokálnej sieti…");
         new Thread(() -> {
-            DatagramSocket ds = null;
-            try {
-                ds = new DatagramSocket(9091);
-                ds.setSoTimeout(6000);
-                byte[] buf = new byte[256];
-                DatagramPacket p = new DatagramPacket(buf, buf.length);
-                ds.receive(p);
-                String msg = new String(p.getData(), 0, p.getLength(), "UTF-8");
-                if (msg.startsWith("ROKID_PHONE")) {
-                    String ip = p.getAddress().getHostAddress();
+            String ownIp = findOwnIp();
+            if (ownIp == null || !ownIp.contains(".")) {
+                runOnUiThread(() -> status.setText("Neviem zistiť IP okuliarov."));
+                return;
+            }
+
+            int lastDot = ownIp.lastIndexOf('.');
+            String prefix = ownIp.substring(0, lastDot + 1);
+
+            for (int i = 1; i <= 254; i++) {
+                if (!runningForDiscovery()) return;
+                String candidate = prefix + i;
+                if (candidate.equals(ownIp)) continue;
+
+                Socket test = new Socket();
+                try {
+                    test.connect(new InetSocketAddress(candidate, 9090), 120);
+                    test.close();
+
+                    String found = candidate;
                     runOnUiThread(() -> {
-                        phoneIp.setText(ip);
-                        status.setText("Mobil nájdený: " + ip + "\nSkúsim pripojenie…");
+                        phoneIp.setText(found);
+                        status.setText("Mobil nájdený: " + found + "\nPripájam…");
                         startStreaming();
                     });
-                } else {
-                    runOnUiThread(() -> status.setText("Našiel som paket, ale nie mobilnú appku."));
+                    return;
+                } catch (Exception ignored) {
+                    try { test.close(); } catch (Exception ignored2) {}
                 }
-            } catch (Exception e) {
-                String m = e.getClass().getSimpleName() + (e.getMessage() == null ? "" : ": " + e.getMessage());
-                runOnUiThread(() -> status.setText("Automatické hľadanie zlyhalo\n" + m));
-            } finally {
-                if (ds != null) ds.close();
             }
-        }, "RokidDiscover").start();
+
+            runOnUiThread(() -> status.setText("Mobil s portom 9090 som v sieti " + prefix + "x nenašiel."));
+        }, "RokidSubnetScan").start();
+    }
+
+    private boolean runningForDiscovery() {
+        return !isFinishing();
+    }
+
+    private String findOwnIp() {
+        try {
+            Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
+            while (ifaces.hasMoreElements()) {
+                NetworkInterface nic = ifaces.nextElement();
+                if (!nic.isUp() || nic.isLoopback()) continue;
+                Enumeration<InetAddress> addrs = nic.getInetAddresses();
+                while (addrs.hasMoreElements()) {
+                    InetAddress a = addrs.nextElement();
+                    if (a instanceof Inet4Address && !a.isLoopbackAddress() && a.isSiteLocalAddress()) {
+                        String ip = a.getHostAddress();
+                        if (ip != null && ip.startsWith("192.168.")) return ip;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 
     @Override protected void onDestroy() {
