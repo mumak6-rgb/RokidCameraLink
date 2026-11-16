@@ -1,0 +1,14 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'sk.bukero.rokidcamera.phone'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'sk.bukero.rokidcamera.phone'
+        minSdk 29
+        targetSdk 35
+        versionCode 1
+        versionName '1.1.0'
+    }
+}
