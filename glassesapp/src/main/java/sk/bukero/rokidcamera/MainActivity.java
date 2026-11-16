@@ -166,17 +166,19 @@ public class MainActivity extends Activity {
             return;
         }
 
-        streaming = true;
-        status.setText("Pripájam sa k " + ip + "…");
+        status.setText("Pripájam sa k " + ip + ":9090…");
 
         new Thread(() -> {
             try {
-                socket = new Socket(ip, 9090);
+                Socket s = new Socket();
+                s.connect(new java.net.InetSocketAddress(ip, 9090), 5000);
+                socket = s;
+                streaming = true;
                 socket.setTcpNoDelay(true);
                 DataOutputStream out = new DataOutputStream(
                         new BufferedOutputStream(socket.getOutputStream()));
 
-                runOnUiThread(() -> status.setText("PRIPOJENÉ • živý obraz ide do mobilu"));
+                runOnUiThread(() -> status.setText("PRIPOJENÉ • obraz sa posiela do mobilu"));
 
                 while (streaming && !socket.isClosed()) {
                     byte[] frame = latestJpeg;
@@ -188,7 +190,8 @@ public class MainActivity extends Activity {
                     try { Thread.sleep(180); } catch (InterruptedException ignored) {}
                 }
             } catch (Exception e) {
-                runOnUiThread(() -> status.setText("Spojenie zlyhalo: " + e.getMessage()));
+                String msg = e.getClass().getSimpleName() + (e.getMessage() == null ? "" : ": " + e.getMessage());
+                runOnUiThread(() -> status.setText("NEPRIPOJENÉ • " + msg));
             } finally {
                 streaming = false;
                 try { if (socket != null) socket.close(); } catch (Exception ignored) {}
