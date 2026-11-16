@@ -169,12 +169,12 @@ public class MainActivity extends Activity {
             return;
         }
 
-        status.setText("Pripájam sa k " + ip + ":9090…");
+        status.setText("Pripájam sa k " + ip + ":8080…");
 
         new Thread(() -> {
             try {
                 Socket s = new Socket();
-                s.connect(new java.net.InetSocketAddress(ip, 9090), 5000);
+                s.connect(new java.net.InetSocketAddress(ip, 8080), 5000);
                 socket = s;
                 streaming = true;
                 socket.setTcpNoDelay(true);
@@ -221,7 +221,7 @@ public class MainActivity extends Activity {
 
                 Socket test = new Socket();
                 try {
-                    test.connect(new InetSocketAddress(candidate, 9090), 120);
+                    test.connect(new InetSocketAddress(candidate, 8080), 120);
                     test.close();
 
                     String found = candidate;
@@ -236,7 +236,7 @@ public class MainActivity extends Activity {
                 }
             }
 
-            runOnUiThread(() -> status.setText("Mobil s portom 9090 som v sieti " + prefix + "x nenašiel."));
+            runOnUiThread(() -> status.setText("Mobil s portom 8080 som v sieti " + prefix + "x nenašiel."));
         }, "RokidSubnetScan").start();
     }
 
