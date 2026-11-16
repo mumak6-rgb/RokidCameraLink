@@ -22,7 +22,8 @@
         android:paddingTop="14dp"
         android:text="Kamera sa spúšťa…"
         android:textColor="#FFFFFF"
-        android:textSize="17sp"/>
+        android:textSize="19sp"
+        android:maxLines="5"/>
 
     <EditText
         android:id="@+id/phoneIp"
@@ -43,4 +44,12 @@
         android:layout_marginTop="14dp"
         android:text="PRIPOJIŤ K MOBILU"
         android:textSize="17sp"/>
+
+    <Button
+        android:id="@+id/autoButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="NÁJSŤ MOBIL AUTOMATICKY"
+        android:textSize="16sp"/>
 </LinearLayout>
